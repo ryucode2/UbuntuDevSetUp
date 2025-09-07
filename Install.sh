@@ -2,20 +2,24 @@
 set -e
 
 ###############################################################################
-# Ubuntu Dev Setup Installer (Zsh symlink + auto Zsh shell)
+# Ubuntu Dev Setup Installer
+# - Installs dev tools (Zsh, Tmux, Neovim, etc.)
+# - Installs Nerd Fonts and configures GNOME Terminal to use them
+# - Symlinks configs from your UbuntuDevSetUp repo
+# - Switches default shell to Zsh
 ###############################################################################
 
 skip_system_packages="${1}"
 os_type="$(uname -s)"
 config_dir="${HOME}/.config/UbuntuDevSetUp"
 
-# Core system packages (zsh plugins installed via apt)
+# Core system packages
 apt_packages="curl git iproute2 python3 python3-pip cmake ripgrep tmux zsh \
 ninja-build gettext libtool libtool-bin autoconf automake g++ pkg-config unzip \
 doxygen gpg gawk tree eza zsh-autosuggestions zsh-syntax-highlighting fontconfig"
 
-# Optional system packages
-apt_packages_optional="gnupg htop npm rsync fonts-firacode"
+# Optional packages
+apt_packages_optional="gnupg htop npm rsync"
 
 ###############################################################################
 # Helpers
@@ -27,6 +31,31 @@ function no_system_packages() {
 
 function apt_install_packages {
   sudo apt-get update && sudo apt-get install -y ${apt_packages} ${apt_packages_optional}
+}
+
+function install_nerd_font() {
+  echo "📦 Installing FiraCode Nerd Font..."
+  mkdir -p ~/.local/share/fonts
+  curl -L -o /tmp/FiraCode.zip \
+    "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.zip"
+  unzip -o /tmp/FiraCode.zip -d ~/.local/share/fonts >/dev/null 2>&1
+  fc-cache -fv
+  echo "✅ FiraCode Nerd Font installed"
+}
+
+function set_gnome_terminal_font() {
+  if command -v gsettings &>/dev/null; then
+    profile=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d \')
+    if [ -n "$profile" ]; then
+      dconf write /org/gnome/terminal/legacy/profiles:/:$profile/use-system-font false
+      dconf write /org/gnome/terminal/legacy/profiles:/:$profile/font "'FiraCode Nerd Font Mono 12'"
+      echo "✅ GNOME Terminal font set to 'FiraCode Nerd Font Mono 12'"
+    else
+      echo "⚠️ Could not detect GNOME Terminal profile. Please set the font manually."
+    fi
+  else
+    echo "⚠️ gsettings not found — skipping GNOME Terminal font configuration."
+  fi
 }
 
 ###############################################################################
@@ -57,6 +86,12 @@ if [ -z "${skip_system_packages}" ]; then
 else
   echo "Skipping system package installation."
 fi
+
+###############################################################################
+# Nerd Fonts install + apply to terminal
+###############################################################################
+install_nerd_font
+set_gnome_terminal_font
 
 ###############################################################################
 # Clone or update UbuntuDevSetUp repo
@@ -110,5 +145,20 @@ else
 fi
 
 ###############################################################################
-# LazyVim config
-###################
+# Switch default shell to Zsh
+###############################################################################
+if [ "$SHELL" != "$(which zsh)" ]; then
+  echo "🔄 Switching default shell to Zsh..."
+  chsh -s "$(which zsh)"
+  echo "✅ Default shell changed to Zsh. Restart terminal or log out/in to apply."
+fi
+
+###############################################################################
+# Final message
+###############################################################################
+echo
+echo "⚡ Setup Complete!"
+echo "👉 Your terminal font has been set to 'FiraCode Nerd Font Mono 12'."
+echo "👉 Your default shell is now Zsh."
+echo "👉 Restart your terminal to see icons working properly."
+echo
