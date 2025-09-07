@@ -87,7 +87,7 @@ fi
 # Clone or update UbuntuDevSetUp repo
 ###############################################################################
 if [ ! -d "${config_dir}" ]; then
-    git clone https://github.com/ryucode2/Ubuntu-Dev-SetUp.git "${config_dir}"
+    git clone https://github.com/ryucode2/UbuntuDevSetUp.git "${config_dir}"
 else
     echo "Updating repo: ${config_dir}"
     git -C "${config_dir}" pull --ff-only
