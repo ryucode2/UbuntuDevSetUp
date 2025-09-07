@@ -2,22 +2,23 @@
 set -e
 
 ###############################################################################
-# Ubuntu Dev Setup Installer (with eza + Nerd Font)
+# Ubuntu Dev Setup Installer (with zsh plugins + prompt fixes)
 ###############################################################################
 
 skip_system_packages="${1}"
 os_type="$(uname -s)"
 config_dir="${HOME}/.config/UbuntuDevSetUp"
 
-# Core system packages
+# Core system packages (added zsh-autosuggestions + zsh-syntax-highlighting)
 apt_packages="curl git iproute2 python3 python3-pip cmake ripgrep tmux zsh \
-ninja-build gettext libtool libtool-bin autoconf automake g++ pkg-config unzip doxygen gpg gawk tree cargo"
+ninja-build gettext libtool libtool-bin autoconf automake g++ pkg-config unzip \
+doxygen gpg gawk tree eza zsh-autosuggestions zsh-syntax-highlighting"
 
 # Optional system packages
 apt_packages_optional="gnupg htop npm rsync fonts-firacode"
 
 ###############################################################################
-# Helper functions
+# Helpers
 ###############################################################################
 function no_system_packages() {
   cat <<EOF
@@ -28,10 +29,6 @@ EOF
 
 function apt_install_packages {
   sudo apt-get update && sudo apt-get install -y ${apt_packages} ${apt_packages_optional}
-}
-
-function display_packages {
-  echo "${apt_packages} ${apt_packages_optional}"
 }
 
 ###############################################################################
@@ -69,13 +66,11 @@ else
 fi
 
 ###############################################################################
-# Install system packages (prompt)
+# Install system packages
 ###############################################################################
 if [ -z "${skip_system_packages}" ]; then
-  cat <<EOF
-The following system packages will be installed:
-$(display_packages)
-EOF
+  echo "The following system packages will be installed:"
+  echo "${apt_packages} ${apt_packages_optional}"
   while true; do
     read -rp "Proceed? (y/n) " yn
     case "${yn}" in
@@ -102,13 +97,12 @@ else
 fi
 
 ###############################################################################
-# Normalize repo directories (fix capitalization issues)
+# Normalize repo dirs
 ###############################################################################
 for d in Zsh zsh Tmux tmux Nvim nvim; do
   if [ -d "${config_dir}/${d}" ]; then
     lower=$(echo "$d" | tr '[:upper:]' '[:lower:]')
     if [ "$d" != "$lower" ]; then
-      echo "Renaming ${d} → ${lower}"
       mv "${config_dir}/${d}" "${config_dir}/${lower}"
     fi
   fi
@@ -119,8 +113,73 @@ done
 ###############################################################################
 mkdir -p "${config_dir}/zsh"
 
-# Minimal default .zshrc if none exists
-[ ! -f "${config_dir}/zsh/.zshrc" ] && echo "# Default .zshrc" >"${config_dir}/zsh/.zshrc"
+# Default .zshrc
+cat >"${config_dir}/zsh/.zshrc" <<'EOF'
+# ~/.zshrc for system-wide plugins (Debian/Ubuntu apt)
+
+export TERM=xterm-256color
+[ -f ~/.aliases ] && source ~/.aliases
+
+# Options
+setopt autocd interactivecomments promptsubst
+setopt hist_ignore_dups hist_ignore_space hist_expire_dups_first
+
+WORDCHARS=${WORDCHARS//\/}
+export PROMPT_EOL_MARK=""
+
+# Keybindings
+bindkey -e
+bindkey ' ' magic-space
+bindkey '^[[3;5~' kill-word
+bindkey '^[[1;5C' forward-word
+bindkey '^[[1;5D' backward-word
+bindkey '^[[5~' beginning-of-buffer-or-history
+bindkey '^[[6~' end-of-buffer-or-history
+bindkey '^[[Z' undo
+
+# Completion
+fpath+=(/usr/share/zsh/vendor-completions)
+autoload -Uz compinit
+compinit -u -d ~/.cache/zcompdump
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# History
+HISTFILE=~/.zsh_history
+HISTSIZE=5000
+SAVEHIST=5000
+alias history="history 0"
+
+# Prompt
+PROMPT=$'%F{green}──(%n㉿%m)-[%~]\n└─>>>> %f'
+RPROMPT=$'%(?.. %? %F{red}%B⨯%b%F{reset})%(1j. %j %F{yellow}%B⚙%b%F{reset}.)'
+
+# Plugins (system-wide from /usr/share)
+if [ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
+  . /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+  ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#888'
+fi
+
+if [ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
+  . /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
+
+# Aliases
+alias ll='ls -la'
+alias la='ls -A'
+alias l='ls -CF'
+alias ls='eza --icons --group-directories-first'
+
+# Clear screen with reset prompt
+alias clear='printf "\033c"'
+zle_clear_screen() {
+  printf "\033c"
+  zle reset-prompt
+}
+zle -N clear-screen zle_clear_screen
+EOF
+
 [ ! -f "${config_dir}/zsh/.aliases" ] && echo "# Default .aliases" >"${config_dir}/zsh/.aliases"
 
 ln -fs "${config_dir}/zsh/.zshrc" "${HOME}/.zshrc"
@@ -147,98 +206,45 @@ else
 fi
 
 ###############################################################################
-# Install LazyVim starter config
+# LazyVim config
 ###############################################################################
 rm -rf "${HOME}/.config/nvim"
 git clone https://github.com/LazyVim/starter "${HOME}/.config/nvim"
 
 ###############################################################################
-# Install tmux plugin manager (TPM)
+# Tmux plugin manager
 ###############################################################################
 rm -rf "${HOME}/.tmux/plugins/tpm"
 git clone --depth 1 https://github.com/tmux-plugins/tpm "${HOME}/.tmux/plugins/tpm"
 "${HOME}/.tmux/plugins/tpm/bin/install_plugins" || true
 
 ###############################################################################
-# Install fzf
+# fzf
 ###############################################################################
 rm -rf "${HOME}/.local/share/fzf"
 git clone --depth 1 https://github.com/junegunn/fzf.git "${HOME}/.local/share/fzf"
 yes | "${HOME}/.local/share/fzf/install" --bin --no-update-rc
 
 ###############################################################################
-# Install zsh plugins manually (latest versions from GitHub)
-###############################################################################
-ZSH_PLUGIN_DIR="${HOME}/.zsh"
-mkdir -p "$ZSH_PLUGIN_DIR"
-
-if [ ! -d "$ZSH_PLUGIN_DIR/zsh-syntax-highlighting" ]; then
-  git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_PLUGIN_DIR/zsh-syntax-highlighting"
-fi
-
-if [ ! -d "$ZSH_PLUGIN_DIR/zsh-autosuggestions" ]; then
-  git clone https://github.com/zsh-users/zsh-autosuggestions.git "$ZSH_PLUGIN_DIR/zsh-autosuggestions"
-fi
-
-###############################################################################
-# Install eza (better ls with icons) + Nerd Font
-###############################################################################
-if ! command -v eza &>/dev/null; then
-  cargo install eza
-  sudo ln -sf "$HOME/.cargo/bin/eza" /usr/local/bin/eza
-  echo "✅ eza installed."
-else
-  echo "✅ eza already installed."
-fi
-
-# Install Nerd Font (FiraCode)
-FONT_DIR="$HOME/.local/share/fonts"
-mkdir -p "$FONT_DIR"
-if [ ! -f "$FONT_DIR/FiraCodeNerdFont-Regular.ttf" ]; then
-  wget -qO /tmp/FiraCode.zip "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/FiraCode.zip"
-  unzip -o /tmp/FiraCode.zip -d "$FONT_DIR"
-  fc-cache -fv "$FONT_DIR"
-  echo "✅ FiraCode Nerd Font installed."
-else
-  echo "✅ FiraCode Nerd Font already installed."
-fi
-
-# Update ~/.zshrc with eza aliases if not already present
-if ! grep -q "eza --icons" "$HOME/.zshrc"; then
-  cat <<'EOF' >>"$HOME/.zshrc"
-
-# ── Fancy ls replacement with icons ──
-if command -v eza &>/dev/null; then
-  alias ls='eza --icons --color=auto'
-  alias ll='eza -al --icons --color=auto'
-  alias la='eza -a --icons --color=auto'
-  alias l='eza -l --icons --color=auto'
-fi
-EOF
-  echo "✅ Added eza aliases to ~/.zshrc"
-else
-  echo "ℹ️ eza aliases already exist in ~/.zshrc"
-fi
-
-###############################################################################
 # Set zsh as default shell
 ###############################################################################
 if [ "${SHELL}" != "$(command -v zsh)" ]; then
-  echo "Changing default shell to zsh..."
   chsh -s "$(command -v zsh)" || echo "⚠️ Could not change shell automatically."
 fi
 
 ###############################################################################
-# Cleanup & Reboot with countdown
+# Reboot Countdown
 ###############################################################################
-echo "Cleaning up installer..."
-rm -rf "${PWD}/Ubuntu-Dev-SetUp" || true
-
-echo -e "\n✅ Setup complete!"
-echo "System will reboot in 10 seconds to apply changes..."
-for i in {10..1}; do
-  echo -ne "$i...\r"
+echo -e "\n⚡ System will reboot in 30 seconds to apply changes..."
+echo "   Press CTRL+C to cancel."
+for i in {15..1}; do
+  echo -ne "   Rebooting in $i seconds...\r"
   sleep 1
 done
 
 sudo reboot
+
+###############################################################################
+# Done (only shown if user cancels reboot with CTRL+C)
+###############################################################################
+echo -e "\n✅ Setup complete! Please restart your terminal or run: exec zsh"
