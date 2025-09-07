@@ -162,3 +162,11 @@ echo "👉 Your terminal font has been set to 'FiraCode Nerd Font Mono 12'."
 echo "👉 Your default shell is now Zsh."
 echo "👉 Restart your terminal to see icons working properly."
 echo
+# Countdown reboot
+echo "🔄 System will reboot in 10 seconds to apply all changes..."
+for i in {10..1}; do
+  echo -ne "\rRebooting in $i seconds... Press CTRL+C to cancel."
+  sleep 1
+done
+echo
+sudo reboot
