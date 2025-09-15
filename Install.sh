@@ -1,4 +1,4 @@
-!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 echo "🚀 Starting Ubuntu Dev Setup..."
@@ -18,6 +18,23 @@ sudo apt-get update -qq
 sudo apt-get install -y "${APT_PACKAGES[@]}" "${APT_OPTIONAL[@]}" dconf-cli gnome-tweaks gnome-extensions-app
 
 # -----------------------------
+# Extra: Install Zsh plugins if missing
+# -----------------------------
+ZSH_SHARE="/usr/share/"
+
+# zsh-autosuggestions
+if [ ! -d "$ZSH_SHARE/zsh-autosuggestions" ]; then
+  echo "📦 Installing zsh-autosuggestions into $ZSH_SHARE..."
+  sudo git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_SHARE/zsh-autosuggestions"
+fi
+
+# zsh-syntax-highlighting
+if [ ! -d "$ZSH_SHARE/zsh-syntax-highlighting" ]; then
+  echo "📦 Installing zsh-syntax-highlighting into $ZSH_SHARE..."
+  sudo git clone https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_SHARE/zsh-syntax-highlighting"
+fi
+
+# -----------------------------
 # 2️⃣ Setup configs directory and pull repo
 # -----------------------------
 CONFIG_DIR="$HOME/.config/UbuntuDevSetUp"
@@ -30,21 +47,36 @@ else
 fi
 
 mkdir -p "$CONFIG_DIR/zsh" "$CONFIG_DIR/tmux" "$CONFIG_DIR/nvim"
-[ ! -f "$CONFIG_DIR/zsh/.zshrc" ] && echo "# Default .zshrc" >"$CONFIG_DIR/zsh/.zshrc"
-[ ! -f "$CONFIG_DIR/tmux/.tmux.conf" ] && echo "# Default .tmux.conf" >"$CONFIG_DIR/tmux/.tmux.conf"
+[ ! -f "$CONFIG_DIR/zsh/.zshrc" ] && echo "# Default .zshrc" >"$HOME/.zshrc"
+[ ! -f "$CONFIG_DIR/.tmux.conf" ] && echo "# Default .tmux.conf" >"$HOME/.tmux.conf"
+
 
 # -----------------------------
-# 3️⃣ Symlink configs safely
+# 3️⃣ Symlink configs safely (excluding nvim)
 # -----------------------------
 echo "⚡ Symlinking config files..."
-find "$CONFIG_DIR" -type f | while read -r file; do
-  rel_path="${file#$CONFIG_DIR/}"
-  target="$HOME/$rel_path"
-  mkdir -p "$(dirname "$target")"
-  [ -e "$target" ] && mv "$target" "$target.bak"
-  ln -fs "$file" "$target"
-  echo "Linked $file → $target"
-done
+
+# Map zsh config
+if [ -f "$CONFIG_DIR/zsh/.zshrc" ]; then
+  target="$HOME/.zshrc"
+  if [ -e "$target" ] && [ ! -L "$target" ]; then
+    mv "$target" "$target.$(date +%Y%m%d%H%M%S).bak"
+  fi
+  ln -fs "$CONFIG_DIR/zsh/.zshrc" "$target"
+  echo "Linked $CONFIG_DIR/zsh/.zshrc → $target"
+fi
+
+# Map tmux config
+if [ -f "$CONFIG_DIR/tmux/.tmux.conf" ]; then
+  target="$HOME/.tmux.conf"
+  if [ -e "$target" ] && [ ! -L "$target" ]; then
+    mv "$target" "$target.$(date +%Y%m%d%H%M%S).bak"
+  fi
+  ln -fs "$CONFIG_DIR/tmux/.tmux.conf" "$target"
+  echo "Linked $CONFIG_DIR/tmux/.tmux.conf → $target"
+fi
+
+# Neovim configs are intentionally skipped here
 
 # -----------------------------
 # 4️⃣ Install Neovim + LazyVim
@@ -78,10 +110,9 @@ if [ ! -f "FiraCodeNerdFontMono-Regular.ttf" ]; then
 fi
 
 # -----------------------------
-# 6️⃣ GNOME Terminal TokyoNight theme + transparency
+# 6️⃣ GNOME Terminal 
 # -----------------------------
 export TERMINAL=gnome-terminal
-echo "🎨 Installing GNOME Terminal theme (TokyoNight) with transparency..."
 bash -c "$(wget -qO- https://git.io/vQgMr)" || {
   echo "❌ Gogh installer failed!"
   exit 1
