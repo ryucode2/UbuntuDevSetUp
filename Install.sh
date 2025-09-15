@@ -125,13 +125,6 @@ if [ -n "$PROFILE" ]; then
 fi
 
 # -----------------------------
-# 7️⃣ Launch GNOME Extensions Manager
-# -----------------------------
-echo -e "\n⚡ GNOME Extensions Manager installed. Launching..."
-echo "👉 Use it to install Workspace Grid, Workspace Indicator, and any other extensions."
-gnome-extensions-app &
-
-# -----------------------------
 # 8️⃣ Set Zsh as default shell
 # -----------------------------
 zsh_path=$(command -v zsh)
