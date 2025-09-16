@@ -35,7 +35,7 @@ SAVEHIST=5000
 alias history="history 0"
 
 # Prompt
-PROMPT=$'%F{green}┌─[%B%F{blue}%n㉿%m%b%F{green}]-[%~]%f
+PROMPT=$'%F{green}┌─[%B%F{blue}%n%m%b%F{green}]-[%~]%f
 %F{green}└─%F{yellow}>>>> %f'
 RPROMPT=$'%(?.. %? %F{red}%B⨯%b%F{reset})%(1j. %j %F{yellow}%B⚙%b%F{reset}.)'
 
