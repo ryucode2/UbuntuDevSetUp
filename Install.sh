@@ -125,14 +125,14 @@ if [ -n "$PROFILE" ]; then
 fi
 
 # -----------------------------
-# 8️⃣ Set Zsh as default shell
+#  7️⃣ Set Zsh as default shell
 # -----------------------------
 zsh_path=$(command -v zsh)
 chsh -s "$zsh_path" 2>/dev/null || sudo usermod --shell "$zsh_path" "$(whoami)"
 echo "🔎 Current shell: $(getent passwd $(whoami) | cut -d: -f7)"
 
 # -----------------------------
-# 9️⃣ Finish
+# 8️⃣ Finish
 # -----------------------------
 echo -e "\n✅ Ubuntu Dev Setup Complete!"
 echo "👉 Zsh is default shell"
