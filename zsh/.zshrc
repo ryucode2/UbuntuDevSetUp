@@ -35,16 +35,15 @@ SAVEHIST=5000
 alias history="history 0"
 
 # Prompt
-PROMPT=$'%F{green}┌─[%B%F{blue}%n%m%b%F{green}]-[%~]%f
+PROMPT=$'%F{green}┌─[%B%F{blue}%n %m%b%F{green}]-[%~]%f
 %F{green}└─%F{yellow}>>>> %f'
 RPROMPT=$'%(?.. %? %F{red}%B⨯%b%F{reset})%(1j. %j %F{yellow}%B⚙%b%F{reset}.)'
 
-# Plugins (system-wide from /usr/share)
+# Plugins
 if [ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
   . /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
   ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#888'
 fi
-
 if [ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
   . /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 fi
@@ -62,3 +61,11 @@ zle_clear_screen() {
   zle reset-prompt
 }
 zle -N clear-screen zle_clear_screen
+
+# ===========================
+# TMUX AUTO-START (safe & project-aware)
+# ===========================
+if [[ -o interactive ]] && command -v tmux &>/dev/null && [ -z "$TMUX" ] && [ -z "$NO_TMUX" ]; then
+    SESSION_NAME=${PWD##*/}  # one session per folder/project
+    tmux attach-session -t "$SESSION_NAME" 2>/dev/null || tmux new-session -s "$SESSION_NAME"
+fi
