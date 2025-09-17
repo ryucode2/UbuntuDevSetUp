@@ -15,7 +15,7 @@ APT_PACKAGES=(
 APT_OPTIONAL=(gnupg htop npm rsync fonts-firacode)
 
 sudo apt-get update -qq
-sudo apt-get install -y "${APT_PACKAGES[@]}" "${APT_OPTIONAL[@]}" dconf-cli gnome-tweaks gnome-extensions-app
+sudo apt-get install -y "${APT_PACKAGES[@]}" "${APT_OPTIONAL[@]}" dconf-cli gnome-tweaks gnome-extensions-app xclip
 
 # -----------------------------
 # Extra: Install Zsh plugins if missing
